@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex items-end justify-between"><div><h1 class="text-3xl font-semibold">Ingest job</h1><p class="mt-1 text-zinc-400">{{ job.workspace_slug }} · {{ job.status }} · {{ job.scanned_urls }}/{{ job.total_urls }} scanned · {{ job.found_media }} found</p></div>{% if job.status in ['ready','partial'] %}<form method="post" action="/jobs/{{ job.id }}/import"><button class="button">Import everything</button></form>{% endif %}</div>
+{% if job.status in ['queued','scanning','importing'] %}<meta http-equiv="refresh" content="2">{% endif %}
+<div class="mt-6 space-y-4">
+{% for item in job.items %}<section class="rounded-xl border border-zinc-800 bg-zinc-900 p-4"><div class="flex justify-between gap-3"><a class="truncate text-sm text-zinc-300 hover:text-white" target="_blank" href="{{ item.url }}">{{ item.url }}</a><span class="text-xs uppercase text-zinc-500">{{ item.status }}</span></div>
+{% if item.error %}<div class="mt-3 rounded bg-red-950/40 p-3 text-sm text-red-300">{{ item.error }}</div>{% endif %}
+{% set scan = scans.get(item.id) %}{% if scan %}<div class="mt-3"><div class="font-medium">{{ scan.title or scan.caption or scan.platform|title }}</div><div class="mt-1 text-sm text-zinc-500">{{ scan.platform }} · {{ scan.media|length }} media · {{ scan.extractor }}</div><div class="mt-3 flex gap-2 overflow-x-auto">{% for med in scan.media[:10] %}{% if med.thumbnail_url or med.media_type == 'image' %}<img src="{{ med.thumbnail_url or med.url }}" class="h-24 w-24 rounded object-cover bg-zinc-800">{% else %}<div class="flex h-24 w-24 shrink-0 items-center justify-center rounded bg-zinc-800 text-xs">{{ med.media_type }}</div>{% endif %}{% endfor %}</div></div>{% endif %}
+</section>{% endfor %}</div>
+{% endblock %}

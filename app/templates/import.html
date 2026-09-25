@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mx-auto max-w-3xl"><h1 class="text-3xl font-semibold">Import media</h1><p class="mt-1 text-zinc-400">Paste one source URL per line. Scan first; import after you review what was discovered.</p>
+<form method="post" action="/import" class="mt-6 space-y-4">
+  <label class="block"><span class="label">Client</span><select name="workspace" required class="field w-full">{% for ws in workspaces %}<option value="{{ ws.slug }}">{{ ws.name }}</option>{% endfor %}</select></label>
+  <label class="block"><span class="label">Links</span><textarea name="urls" required rows="12" class="field w-full font-mono text-sm" placeholder="https://facebook.com/...&#10;https://instagram.com/...&#10;https://example.com/article"></textarea></label>
+  <div class="flex gap-5 text-sm"><label><input type="radio" name="mode" value="auto" checked> Auto detect</label><label><input type="radio" name="mode" value="generic"> Generic Find Media</label></div>
+  <button class="button">Scan</button>
+</form></div>
+{% endblock %}

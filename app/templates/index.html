@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-8 flex items-end justify-between gap-4">
+  <div><h1 class="text-3xl font-semibold">Clients</h1><p class="mt-1 text-zinc-400">Shared media/content workspaces.</p></div>
+</div>
+<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+{% for ws in workspaces %}
+  <a href="/workspaces/{{ ws.slug }}" class="rounded-xl border border-zinc-800 bg-zinc-900 p-5 hover:border-zinc-600"><div class="font-medium">{{ ws.name }}</div><div class="mt-1 text-sm text-zinc-500">{{ ws.slug }}</div></a>
+{% else %}<div class="text-zinc-500">No workspaces yet. Create the first one below.</div>{% endfor %}
+</div>
+<form method="post" action="/workspaces" class="mt-8 flex max-w-xl gap-2">
+  <input name="name" required placeholder="Client name" class="field flex-1">
+  <input name="slug" required placeholder="slug" class="field w-44">
+  <button class="button">Create</button>
+</form>
+{% endblock %}
