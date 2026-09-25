@@ -1,0 +1,13 @@
+[x-cloak] { display:none !important; }
+.media-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; }
+@media (min-width:640px){.media-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}
+@media (min-width:1024px){.media-grid{grid-template-columns:repeat(6,minmax(0,1fr));}}
+.field { border:1px solid rgb(63 63 70); background:rgb(24 24 27); border-radius:.55rem; padding:.65rem .8rem; color:white; outline:none; }
+.field:focus { border-color:rgb(113 113 122); }
+.button,.button-secondary { border-radius:.55rem; padding:.65rem .9rem; font-weight:600; font-size:.875rem; }
+.button { background:white; color:black; }
+.button:hover { background:rgb(228 228 231); }
+.button:disabled { opacity:.45; cursor:not-allowed; }
+.button-secondary { border:1px solid rgb(63 63 70); background:rgb(39 39 42); }
+.button-secondary:hover { background:rgb(63 63 70); }
+.label { display:block; margin-bottom:.4rem; font-size:.8rem; color:rgb(161 161 170); }
