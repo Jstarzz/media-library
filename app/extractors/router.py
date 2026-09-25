@@ -1,6 +1,7 @@
 from app.extractors.base import ExtractResult
 from app.extractors.browser import BrowserExtractor
 from app.extractors.generic import GenericExtractor
+from app.extractors.pixieset import PixiesetExtractor, is_pixieset_host, looks_like_pixieset
 from app.extractors.tools import GalleryDLExtractor, YtDlpExtractor, detect_platform
 
 
@@ -30,11 +31,21 @@ class ExtractorRouter:
         self.video = YtDlpExtractor()
         self.generic = GenericExtractor()
         self.browser = BrowserExtractor()
+        self.pixieset = PixiesetExtractor()
 
     async def _generic_layered(self, url: str, errors: list[str]) -> ExtractResult:
         static_result = None
         try:
             static_result = await self.generic.extract(url)
+            # Photographer galleries on custom domains: the static page only
+            # exposes a cover image, but its CDN gives it away.
+            if looks_like_pixieset(static_result):
+                try:
+                    full = await self.pixieset.extract(url)
+                    if full.media:
+                        return full
+                except Exception as exc:
+                    errors.append(f"{self.pixieset.name}: {exc}")
             if len(static_result.media) >= 2:
                 if errors:
                     static_result.warnings.extend(errors)
@@ -66,7 +77,9 @@ class ExtractorRouter:
 
         platform = detect_platform(url)
         extractors = []
-        if platform in {"facebook", "instagram"}:
+        if is_pixieset_host(url):
+            extractors.append(self.pixieset)
+        elif platform in {"facebook", "instagram"}:
             extractors.extend([self.gallery, self.video])
         elif platform in {"youtube", "tiktok"}:
             extractors.append(self.video)

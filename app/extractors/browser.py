@@ -30,6 +30,28 @@ def score_network_candidate(url: str, mime_type: str, content_length: int | None
     return score
 
 
+BROWSER_USER_AGENT = "MediaLibrary/0.1 (+internal media discovery)"
+
+
+async def public_only_route(route):
+    """Playwright route handler: let data/blob/about through, abort anything
+    that isn't a public http(s) destination (same SSRF policy as direct fetches)."""
+    request_url = route.request.url
+    parsed = urlparse(request_url)
+    if parsed.scheme in {"data", "blob", "about"}:
+        await route.continue_()
+        return
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        await route.abort()
+        return
+    try:
+        await asyncio.to_thread(validate_public_url, request_url)
+    except ValueError:
+        await route.abort()
+        return
+    await route.continue_()
+
+
 class BrowserExtractor:
     name = "playwright"
 
@@ -53,29 +75,12 @@ class BrowserExtractor:
         async with async_playwright() as playwright:
             browser = await playwright.chromium.launch(headless=True, args=["--disable-dev-shm-usage"])
             context = await browser.new_context(
-                user_agent="MediaLibrary/0.1 (+internal media discovery)",
+                user_agent=BROWSER_USER_AGENT,
                 viewport={"width": 1440, "height": 1000},
             )
             page = await context.new_page()
 
-            async def guard(route):
-                request_url = route.request.url
-                parsed = urlparse(request_url)
-                if parsed.scheme in {"data", "blob", "about"}:
-                    await route.continue_()
-                    return
-                if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-                    await route.abort()
-                    return
-
-                try:
-                    await asyncio.to_thread(validate_public_url, request_url)
-                except ValueError:
-                    await route.abort()
-                    return
-                await route.continue_()
-
-            await page.route("**/*", guard)
+            await page.route("**/*", public_only_route)
 
             async def capture(response):
                 try:
@@ -119,6 +124,7 @@ class BrowserExtractor:
                 if request_tasks:
                     await asyncio.gather(*list(request_tasks), return_exceptions=True)
             finally:
+                await page.unroute_all(behavior="ignoreErrors")
                 await context.close()
                 await browser.close()
 
