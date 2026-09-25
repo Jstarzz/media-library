@@ -158,3 +158,14 @@ class APIKey(Base):
     scopes: Mapped[str] = mapped_column(String(200), default="read")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
+
+
+class ExportJob(Base):
+    __tablename__ = "exports"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("exp"))
+    workspace_slug: Mapped[str] = mapped_column(ForeignKey("workspaces.slug", ondelete="CASCADE"), index=True)
+    local_path: Mapped[str] = mapped_column(Text)
+    file_size: Mapped[int] = mapped_column(Integer, default=0)
+    media_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)

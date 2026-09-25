@@ -3,21 +3,50 @@
 {% block content %}
 <div class="mb-5 flex flex-wrap items-end justify-between gap-4">
   <div><h1 class="text-3xl font-semibold">{{ workspace.name }}</h1><p class="mt-1 text-sm text-zinc-500">{{ media_count }} media · {{ source_count }} sources</p></div>
-  <a class="button" href="/import">Import media</a>
+  <div class="flex gap-2"><a class="button-secondary" href="/collections?workspace={{ workspace.slug }}">Collections</a><a class="button" href="/import">Import media</a></div>
 </div>
-<form class="mb-5 flex flex-wrap gap-2">
-  <input name="q" value="{{ q }}" placeholder="Search media and content…" class="field min-w-72 flex-1">
+
+<form class="mb-5 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]">
+  <input name="q" value="{{ q }}" placeholder="Search media and content…" class="field min-w-0">
   <select name="media_type" class="field"><option value="">All media</option><option value="image" {% if media_type=='image' %}selected{% endif %}>Images</option><option value="video" {% if media_type=='video' %}selected{% endif %}>Videos</option><option value="audio" {% if media_type=='audio' %}selected{% endif %}>Audio</option></select>
-  <button class="button-secondary">Search</button>
+  <select name="platform" class="field"><option value="">All platforms</option>{% for p in platforms %}<option value="{{ p }}" {% if platform==p %}selected{% endif %}>{{ p|title }}</option>{% endfor %}</select>
+  <select name="collection" class="field"><option value="">All collections</option>{% for col in collections %}<option value="{{ col.id }}" {% if collection_id==col.id %}selected{% endif %}>{{ col.name }}</option>{% endfor %}</select>
+  <button class="button-secondary">Filter</button>
 </form>
-<div class="media-grid">
-{% for item in media %}
-  <a href="/media/{{ item.id }}" class="group relative aspect-square overflow-hidden rounded-lg bg-zinc-900">
-    {% if item.thumbnail_path %}<img loading="lazy" src="/media/{{ item.id }}/thumbnail" class="h-full w-full object-cover transition group-hover:scale-[1.02]">
-    {% else %}<div class="flex h-full items-center justify-center text-xs uppercase text-zinc-600">{{ item.media_type }}</div>{% endif %}
-    {% if item.media_type == 'video' %}<span class="absolute bottom-2 right-2 rounded bg-black/70 px-2 py-1 text-xs">Video</span>{% endif %}
-  </a>
-{% else %}<div class="col-span-full py-16 text-center text-zinc-500">Nothing here yet. Import a source and this grid stops being sad.</div>{% endfor %}
+
+<form x-data="{selected: 0}">
+  <div class="media-grid">
+  {% for item in media %}
+    <div class="group relative aspect-square overflow-hidden rounded-lg bg-zinc-900">
+      <a href="/media/{{ item.id }}" class="absolute inset-0">
+        {% if item.thumbnail_path %}<img loading="lazy" src="/media/{{ item.id }}/thumbnail" class="h-full w-full object-cover transition group-hover:scale-[1.02]">
+        {% else %}<div class="flex h-full items-center justify-center text-xs uppercase text-zinc-600">{{ item.media_type }}</div>{% endif %}
+      </a>
+      <label class="absolute left-2 top-2 z-10 rounded bg-black/65 p-1">
+        <input type="checkbox" name="media_ids" value="{{ item.id }}" class="h-4 w-4 accent-white" x-on:change="selected += $event.target.checked ? 1 : -1">
+      </label>
+      {% if item.media_type == 'video' %}<span class="absolute bottom-2 right-2 rounded bg-black/70 px-2 py-1 text-xs">Video</span>{% endif %}
+    </div>
+  {% else %}<div class="col-span-full py-16 text-center text-zinc-500">Nothing here yet. Import something useful, menace.</div>{% endfor %}
+  </div>
+
+  <div x-show="selected > 0" x-cloak class="sticky bottom-4 z-20 mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-700 bg-zinc-900/95 p-3 shadow-2xl backdrop-blur">
+    <div class="text-sm"><span class="font-medium" x-text="selected"></span> selected</div>
+    <div class="flex flex-wrap gap-2">
+      {% if collections %}
+      <select name="collection_id" class="field py-2"><option value="">Choose collection…</option>{% for col in collections %}<option value="{{ col.id }}">{{ col.name }}</option>{% endfor %}</select>
+      <button class="button-secondary" formaction="/workspaces/{{ workspace.slug }}/collections/add" formmethod="post">Add to collection</button>
+      {% endif %}
+      <button class="button-secondary" formaction="/workspaces/{{ workspace.slug }}/export" formmethod="post">Export ZIP</button>
+      <button class="button-secondary" formaction="/workspaces/{{ workspace.slug }}/media/delete" formmethod="post" onclick="return confirm('Delete selected imported files?')">Delete</button>
+    </div>
+  </div>
+</form>
+
+{% if not q %}
+<div class="mt-6 flex gap-2">
+  {% if page > 1 %}<a class="button-secondary" href="?page={{ page-1 }}&media_type={{ media_type }}&platform={{ platform }}&collection={{ collection_id }}">Previous</a>{% endif %}
+  {% if has_next %}<a class="button-secondary" href="?page={{ page+1 }}&media_type={{ media_type }}&platform={{ platform }}&collection={{ collection_id }}">Next</a>{% endif %}
 </div>
-{% if not q %}<div class="mt-6 flex gap-2">{% if page > 1 %}<a class="button-secondary" href="?page={{ page-1 }}&media_type={{ media_type }}">Previous</a>{% endif %}<a class="button-secondary" href="?page={{ page+1 }}&media_type={{ media_type }}">Next</a></div>{% endif %}
+{% endif %}
 {% endblock %}

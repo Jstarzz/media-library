@@ -14,5 +14,11 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -e '.[dev]'
-      - run: pytest -q
-      - run: python -m compileall -q app
+      - run: pytest -q -m "not live"
+      - run: python -m compileall -q app tests scripts
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t media-library:test .

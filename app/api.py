@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy import select
@@ -7,9 +5,10 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
 from app.database import get_db
-from app.models import APIKey, Collection, IngestJob, IngestJobItem, MediaItem, Source, Workspace
-from app.schemas import CollectionCreate, CollectionMediaAdd, JobCreate, KeyCreate, WorkspaceCreate
+from app.models import APIKey, Collection, ExportJob, IngestJob, IngestJobItem, MediaItem, Source, Workspace
+from app.schemas import CollectionCreate, CollectionMediaAdd, ExportCreate, JobCreate, KeyCreate, WorkspaceCreate
 from app.security import Principal, assert_workspace, generate_api_key, hash_key, require_scope
+from app.services.exports import create_export
 from app.services.ingest import IngestService
 from app.services.search import search_workspace
 
@@ -155,11 +154,19 @@ def get_file(media_id: str, db: Session = Depends(get_db), principal: Principal 
 
 @router.get("/collections")
 def list_collections(workspace: str | None = None, db: Session = Depends(get_db), principal: Principal = Depends(require_scope("read"))):
-    stmt = select(Collection)
+    stmt = select(Collection).options(selectinload(Collection.media))
     if workspace:
         assert_workspace(principal, workspace); stmt = stmt.where(Collection.workspace_slug == workspace)
     rows = db.scalars(stmt.order_by(Collection.name)).all()
     return [{"id": row.id, "workspace": row.workspace_slug, "name": row.name, "description": row.description, "media_count": len(row.media)} for row in rows if principal.can_access(row.workspace_slug)]
+
+
+@router.get("/collections/{collection_id}")
+def get_collection(collection_id: str, db: Session = Depends(get_db), principal: Principal = Depends(require_scope("read"))):
+    row = db.scalar(select(Collection).options(selectinload(Collection.media)).where(Collection.id == collection_id))
+    if not row: raise HTTPException(404, "Collection not found")
+    assert_workspace(principal, row.workspace_slug)
+    return {"id": row.id, "workspace": row.workspace_slug, "name": row.name, "description": row.description, "media": [media_json(m) for m in row.media]}
 
 
 @router.post("/collections", status_code=201)
@@ -180,3 +187,34 @@ def add_collection_media(collection_id: str, body: CollectionMediaAdd, db: Sessi
         if row not in collection.media: collection.media.append(row)
     db.commit()
     return {"id": collection.id, "media_count": len(collection.media)}
+
+
+@router.post("/exports", status_code=201)
+def create_export_api(body: ExportCreate, db: Session = Depends(get_db), principal: Principal = Depends(require_scope("read"))):
+    assert_workspace(principal, body.workspace)
+    try:
+        export = create_export(db, body.workspace, media_ids=body.media_ids or None, collection_id=body.collection_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    base = get_settings().public_base_url.rstrip("/")
+    return {
+        "id": export.id, "workspace": export.workspace_slug, "media_count": export.media_count,
+        "file_size": export.file_size, "file_url": f"{base}/api/v1/exports/{export.id}/file",
+    }
+
+
+@router.get("/exports/{export_id}")
+def get_export(export_id: str, db: Session = Depends(get_db), principal: Principal = Depends(require_scope("read"))):
+    export = db.get(ExportJob, export_id)
+    if not export: raise HTTPException(404, "Export not found")
+    assert_workspace(principal, export.workspace_slug)
+    base = get_settings().public_base_url.rstrip("/")
+    return {"id": export.id, "workspace": export.workspace_slug, "media_count": export.media_count, "file_size": export.file_size, "file_url": f"{base}/api/v1/exports/{export.id}/file"}
+
+
+@router.get("/exports/{export_id}/file")
+def get_export_file(export_id: str, db: Session = Depends(get_db), principal: Principal = Depends(require_scope("read"))):
+    export = db.get(ExportJob, export_id)
+    if not export: raise HTTPException(404, "Export not found")
+    assert_workspace(principal, export.workspace_slug)
+    return FileResponse(export.local_path, media_type="application/zip", filename=f"{export.workspace_slug}-{export.id}.zip")

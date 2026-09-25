@@ -2,6 +2,16 @@
 {% block content %}
 <div class="grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px]">
   <div class="flex min-h-[65vh] items-center justify-center rounded-xl bg-black p-3">{% if media.media_type == 'image' %}<img src="/media/{{ media.id }}/file" class="max-h-[80vh] max-w-full object-contain">{% elif media.media_type == 'video' %}<video controls class="max-h-[80vh] max-w-full" src="/media/{{ media.id }}/file"></video>{% else %}<audio controls src="/media/{{ media.id }}/file"></audio>{% endif %}</div>
-  <aside><h1 class="text-xl font-semibold">{{ source.title if source and source.title else media.filename }}</h1>{% if source %}<div class="mt-2 text-sm text-zinc-500">{{ source.platform|title }}{% if source.published_at %} · {{ source.published_at.date() }}{% endif %}{% if source.author %} · {{ source.author }}{% endif %}</div>{% if source.caption %}<p class="mt-5 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{{ source.caption }}</p>{% endif %}<a target="_blank" href="{{ source.original_url }}" class="mt-5 block text-sm underline text-zinc-400">Open source</a>{% endif %}<div class="mt-6 text-xs text-zinc-500">{% if media.width %}{{ media.width }}×{{ media.height }} · {% endif %}{{ media.file_size or 0 }} bytes</div><a href="/media/{{ media.id }}/file" class="button mt-5 inline-block">Download</a></aside>
+  <aside>
+    <h1 class="text-xl font-semibold">{{ source.title if source and source.title else media.filename }}</h1>
+    {% if source %}
+      <div class="mt-2 text-sm text-zinc-500">{{ source.platform|title }}{% if source.published_at %} · {{ source.published_at.date() }}{% endif %}{% if source.author %} · {{ source.author }}{% endif %}</div>
+      {% if source.caption %}<p class="mt-5 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{{ source.caption }}</p>{% endif %}
+      <a target="_blank" href="{{ source.original_url }}" class="mt-5 block text-sm underline text-zinc-400">Open source</a>
+    {% endif %}
+    <div class="mt-6 text-xs text-zinc-500">{% if media.width %}{{ media.width }}×{{ media.height }} · {% endif %}{{ media.file_size or 0 }} bytes</div>
+    {% if media.collections %}<div class="mt-5 flex flex-wrap gap-2">{% for col in media.collections %}<a href="/collections/{{ col.id }}" class="rounded-full border border-zinc-700 px-2 py-1 text-xs text-zinc-300">{{ col.name }}</a>{% endfor %}</div>{% endif %}
+    <a href="/media/{{ media.id }}/file" class="button mt-5 inline-block">Download</a>
+  </aside>
 </div>
 {% endblock %}

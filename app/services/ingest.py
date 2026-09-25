@@ -1,8 +1,5 @@
 import asyncio
 import json
-import mimetypes
-from datetime import datetime
-from pathlib import Path
 
 from sqlalchemy import select
 
@@ -85,7 +82,7 @@ class IngestService:
                 item = db.get(IngestJobItem, item_id)
                 job = db.get(IngestJob, job_id)
                 result = ExtractResult.from_dict(json.loads(item.scan_json))
-                indexes = selected.get(item_id) if selected else None
+                indexes = None if selected is None else selected.get(item_id, [])
             try:
                 count = await self._import_result(job.workspace_slug, result, indexes)
                 imported += count

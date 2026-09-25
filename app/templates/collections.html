@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Collections · Media Library{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div><h1 class="text-3xl font-semibold">Collections</h1><p class="mt-1 text-zinc-400">Reusable media sets for projects, pages, events, and agent workflows.</p></div>
+  <form method="get"><select name="workspace" class="field" onchange="this.form.submit()"><option value="">All clients</option>{% for ws in workspaces %}<option value="{{ ws.slug }}" {% if selected_workspace==ws.slug %}selected{% endif %}>{{ ws.name }}</option>{% endfor %}</select></form>
+</div>
+
+<div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+{% for col in collections %}
+  <a href="/collections/{{ col.id }}" class="rounded-xl border border-zinc-800 bg-zinc-900 p-5 hover:border-zinc-600">
+    <div class="font-medium">{{ col.name }}</div>
+    <div class="mt-1 text-sm text-zinc-500">{{ col.workspace_slug }} · {{ col.media|length }} items</div>
+    {% if col.description %}<p class="mt-3 line-clamp-2 text-sm text-zinc-400">{{ col.description }}</p>{% endif %}
+  </a>
+{% else %}<div class="text-zinc-500">No collections yet.</div>{% endfor %}
+</div>
+
+<form method="post" action="/collections" class="mt-8 grid max-w-2xl gap-2 rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:grid-cols-2">
+  <select name="workspace" required class="field"><option value="">Client…</option>{% for ws in workspaces %}<option value="{{ ws.slug }}" {% if selected_workspace==ws.slug %}selected{% endif %}>{{ ws.name }}</option>{% endfor %}</select>
+  <input name="name" required placeholder="Collection name" class="field">
+  <input name="description" placeholder="Description (optional)" class="field sm:col-span-2">
+  <div><button class="button">Create collection</button></div>
+</form>
+{% endblock %}

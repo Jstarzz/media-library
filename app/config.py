@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     max_html_mb: int = 8
     scan_concurrency: int = 4
     cookie_dir: Path = Path("/data/auth")
+    browser_enabled: bool = True
+    browser_timeout_ms: int = 20_000
+    browser_scrolls: int = 3
     mcp_api_key: str | None = None
 
     @property

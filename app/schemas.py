@@ -25,6 +25,12 @@ class CollectionMediaAdd(BaseModel):
     media_ids: list[str] = Field(min_length=1)
 
 
+class ExportCreate(BaseModel):
+    workspace: str
+    media_ids: list[str] = Field(default_factory=list)
+    collection_id: str | None = None
+
+
 class KeyCreate(BaseModel):
     name: str
     workspace_access: list[str] | str = "*"
