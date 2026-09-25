@@ -40,7 +40,7 @@ class BrowserExtractor:
         settings = get_settings()
         if not settings.browser_enabled:
             raise ValueError("Browser discovery is disabled")
-        validate_public_url(url)
+        await asyncio.to_thread(validate_public_url, url)
 
         try:
             from playwright.async_api import async_playwright
@@ -49,7 +49,6 @@ class BrowserExtractor:
 
         network_media: dict[str, MediaCandidate] = {}
         request_tasks: set[asyncio.Task] = set()
-        host_cache: dict[tuple[str, str, int | None], bool] = {}
 
         async with async_playwright() as playwright:
             browser = await playwright.chromium.launch(headless=True, args=["--disable-dev-shm-usage"])
@@ -69,20 +68,12 @@ class BrowserExtractor:
                     await route.abort()
                     return
 
-                key = (parsed.scheme, parsed.hostname.lower(), parsed.port)
-                allowed = host_cache.get(key)
-                if allowed is None:
-                    try:
-                        validate_public_url(request_url)
-                        allowed = True
-                    except ValueError:
-                        allowed = False
-                    host_cache[key] = allowed
-
-                if allowed:
-                    await route.continue_()
-                else:
+                try:
+                    await asyncio.to_thread(validate_public_url, request_url)
+                except ValueError:
                     await route.abort()
+                    return
+                await route.continue_()
 
             await page.route("**/*", guard)
 
@@ -122,6 +113,7 @@ class BrowserExtractor:
                 for _ in range(max(0, settings.browser_scrolls)):
                     await page.evaluate("window.scrollBy(0, Math.max(window.innerHeight, 800))")
                     await page.wait_for_timeout(450)
+                await page.wait_for_timeout(250)
                 html = await page.content()
                 final_url = page.url
                 if request_tasks:

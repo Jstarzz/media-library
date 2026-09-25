@@ -176,8 +176,10 @@ def add_to_collection(workspace: str, collection_id: str = Form(...), media_ids:
 
 @router.post("/workspaces/{workspace}/export")
 def export_selected(workspace: str, media_ids: list[str] | None = Form(None), collection_id: str | None = Form(None), db: Session = Depends(get_db)):
+    selected_ids = media_ids or []
+    effective_collection = None if selected_ids else (collection_id or None)
     try:
-        export = create_export(db, workspace, media_ids=media_ids or None, collection_id=collection_id or None)
+        export = create_export(db, workspace, media_ids=selected_ids or None, collection_id=effective_collection)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return RedirectResponse(f"/exports/{export.id}/file", 303)
