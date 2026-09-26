@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     browser_enabled: bool = True
     browser_timeout_ms: int = 20_000
     browser_scrolls: int = 3
+    # Re-encode imported JPEG/PNG images as WebP at this quality; 0 keeps originals.
+    image_webp_quality: int = 82
     mcp_api_key: str | None = None
 
     @property

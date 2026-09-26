@@ -171,6 +171,14 @@ MEDIA_LIBRARY_BROWSER_TIMEOUT_MS=20000
 MEDIA_LIBRARY_BROWSER_SCROLLS=3
 ```
 
+## Storage
+
+Imported JPEG and PNG images are re-encoded as WebP (EXIF rotation applied, ICC profile and transparency kept), which typically saves 40-60% over web JPEGs. GIFs, WebP, video and other types are stored as downloaded. Each item's `sha256` is the hash of the downloaded bytes, so re-scanning a source still deduplicates against items already imported.
+
+```text
+MEDIA_LIBRARY_IMAGE_WEBP_QUALITY=82   # 0 keeps the original files
+```
+
 ## MCP
 
 Run the MCP server using a normal Media Library API key:

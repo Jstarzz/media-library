@@ -9,7 +9,7 @@ from app.extractors.base import ExtractResult, MediaCandidate
 from app.extractors.router import ExtractorRouter
 from app.models import ContentRecord, IngestJob, IngestJobItem, MediaItem, Source, new_id
 from app.services.search import index_source
-from app.storage import LocalStorageProvider, extension_for, sha256_file
+from app.storage import WEBP_SOURCE_MIMES, LocalStorageProvider, convert_to_webp, extension_for, image_size, sha256_file
 from app.urls import safe_get
 
 
@@ -175,13 +175,29 @@ class IngestService:
                 return False
 
             media_id = new_id("med")
-            final_path = self.storage.media_path(workspace, source_id, index, candidate.url, ext)
-            temp.replace(final_path)
+            width, height = candidate.width, candidate.height
+            quality = get_settings().image_webp_quality
+            size = None
+            if candidate.media_type == "image" and mime in WEBP_SOURCE_MIMES and quality > 0:
+                # sha256 above stays the hash of the downloaded bytes so a
+                # re-scan of the same source still dedupes against this item.
+                final_path = self.storage.media_path(workspace, source_id, index, candidate.url, ".webp")
+                size = convert_to_webp(temp, final_path, quality)
+                if size:
+                    temp.unlink(missing_ok=True)
+                    mime = "image/webp"
+            if not size:
+                final_path = self.storage.media_path(workspace, source_id, index, candidate.url, ext)
+                temp.replace(final_path)
+                if candidate.media_type == "image":
+                    size = image_size(final_path)
+            if size:
+                width, height = size
             media = MediaItem(
                 id=media_id, workspace_slug=workspace, platform_media_id=candidate.platform_media_id,
                 media_type=candidate.media_type, mime_type=mime, original_url=candidate.url,
                 local_path=str(final_path), filename=final_path.name, original_filename=candidate.filename,
-                width=candidate.width, height=candidate.height, duration=int(candidate.duration) if candidate.duration else None,
+                width=width, height=height, duration=int(candidate.duration) if candidate.duration else None,
                 file_size=final_path.stat().st_size, alt_text=candidate.alt_text, sha256=digest,
             )
             media.sources.append(source)

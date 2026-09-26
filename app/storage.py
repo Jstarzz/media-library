@@ -4,7 +4,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 from app.config import get_settings
 
@@ -23,6 +23,39 @@ def extension_for(mime_type: str | None, url: str) -> str:
     if not ext:
         ext = Path(url.split("?", 1)[0]).suffix
     return ext.lower()[:10] if ext and ext.startswith(".") else ".bin"
+
+
+WEBP_SOURCE_MIMES = {"image/jpeg", "image/png"}
+
+
+def convert_to_webp(source: Path, destination: Path, quality: int) -> tuple[int, int] | None:
+    """Re-encode an image as WebP (EXIF rotation applied, ICC profile and
+    alpha kept). Returns (width, height), or None if it can't be decoded."""
+    tmp = destination.with_name(destination.name + ".tmp")
+    try:
+        with Image.open(source) as image:
+            icc = image.info.get("icc_profile")
+            image = ImageOps.exif_transpose(image)
+            if image.mode not in {"RGB", "RGBA"}:
+                image = image.convert("RGBA" if "A" in image.getbands() else "RGB")
+            options = {"quality": quality, "method": 6}
+            if icc:
+                options["icc_profile"] = icc
+            image.save(tmp, "WEBP", **options)
+            size = image.size
+        tmp.replace(destination)
+        return size
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        return None
+
+
+def image_size(path: Path) -> tuple[int, int] | None:
+    try:
+        with Image.open(path) as image:
+            return ImageOps.exif_transpose(image).size
+    except Exception:
+        return None
 
 
 class LocalStorageProvider:
